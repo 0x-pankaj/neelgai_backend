@@ -1,0 +1,688 @@
+openapi: 3.0.0
+info:
+  title: Neelgai EdTech Platform API
+  version: '1.0.0'
+  description: API documentation for the Neelgai EdTech Platform
+  contact:
+    name: Development Team
+    email: team@neelgai.com
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local Development
+  - url: https://api.neelgai.com/api/v1
+    description: Production Server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        userName:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        role:
+          type: string
+          enum: [STUDENT, INSTRUCTOR, ADMIN]
+        isVerified:
+          type: boolean
+
+    Course:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        instructor:
+          $ref: '#/components/schemas/User'
+        thumbnail:
+          type: string
+          format: uri
+        category:
+          type: string
+        level:
+          type: string
+          enum: [BEGINNER, INTERMEDIATE, ADVANCED]
+        duration:
+          type: number
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+        enrolledStudents:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        ratings:
+          type: object
+          properties:
+            average:
+              type: number
+            count:
+              type: number
+
+    Module:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        order:
+          type: number
+        lectures:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lecture'
+
+    Lecture:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        videoUrl:
+          type: string
+        duration:
+          type: number
+        resources:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              fileUrl:
+                type: string
+              type:
+                type: string
+                enum: [PDF, DOCUMENT, LINK]
+
+    Quiz:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        duration:
+          type: number
+        passingPercentage:
+          type: number
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        settings:
+          type: object
+          properties:
+            shuffleQuestions:
+              type: boolean
+            shuffleOptions:
+              type: boolean
+            showAnswers:
+              type: boolean
+            maxAttempts:
+              type: number
+
+    Question:
+      type: object
+      properties:
+        questionText:
+          type: string
+        questionType:
+          type: string
+          enum: [MULTIPLE_CHOICE, SINGLE_CHOICE, TRUE_FALSE, SHORT_ANSWER]
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              isCorrect:
+                type: boolean
+        marks:
+          type: number
+        explanation:
+          type: string
+
+    Progress:
+      type: object
+      properties:
+        _id:
+          type: string
+        student:
+          $ref: '#/components/schemas/User'
+        course:
+          $ref: '#/components/schemas/Course'
+        completionPercentage:
+          type: number
+        lastAccessed:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, COMPLETED]
+
+    Discussion:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        author:
+          $ref: '#/components/schemas/User'
+        course:
+          $ref: '#/components/schemas/Course'
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        isResolved:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+
+    Comment:
+      type: object
+      properties:
+        _id:
+          type: string
+        content:
+          type: string
+        author:
+          $ref: '#/components/schemas/User'
+        votes:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    Note:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        student:
+          $ref: '#/components/schemas/User'
+        course:
+          $ref: '#/components/schemas/Course'
+        tags:
+          type: array
+          items:
+            type: string
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              url:
+                type: string
+              type:
+                type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                userName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                fullName:
+                  type: string
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+
+  /courses:
+    get:
+      tags: [Courses]
+      summary: Get all courses
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: level
+          schema:
+            type: string
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  courses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Course'
+                  total:
+                    type: integer
+                  pages:
+                    type: integer
+
+    post:
+      tags: [Courses]
+      summary: Create a new course
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                level:
+                  type: string
+                thumbnail:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Course created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+
+  /courses/{courseId}/modules:
+    post:
+      tags: [Courses]
+      summary: Add module to course
+      parameters:
+        - in: path
+          name: courseId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                order:
+                  type: number
+      responses:
+        '200':
+          description: Module added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+
+  /quizzes:
+    post:
+      tags: [Quizzes]
+      summary: Create a new quiz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                courseId:
+                  type: string
+                moduleId:
+                  type: string
+                duration:
+                  type: number
+                passingPercentage:
+                  type: number
+                questions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Question'
+      responses:
+        '201':
+          description: Quiz created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quiz'
+
+  /quizzes/{quizId}/attempt:
+    post:
+      tags: [Quizzes]
+      summary: Submit quiz attempt
+      parameters:
+        - in: path
+          name: quizId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      questionId:
+                        type: string
+                      selectedOptions:
+                        type: array
+                        items:
+                          type: string
+      responses:
+        '200':
+          description: Quiz attempt submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score:
+                    type: number
+                  passed:
+                    type: boolean
+                  feedback:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        questionId:
+                          type: string
+                        correct:
+                          type: boolean
+                        explanation:
+                          type: string
+
+  /progress/{courseId}:
+    get:
+      tags: [Progress]
+      summary: Get course progress
+      parameters:
+        - in: path
+          name: courseId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Course progress details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Progress'
+
+  /discussions:
+    get:
+      tags: [Discussions]
+      summary: Get discussions
+      parameters:
+        - in: query
+          name: courseId
+          schema:
+            type: string
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of discussions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Discussion'
+
+    post:
+      tags: [Discussions]
+      summary: Create discussion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                courseId:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Discussion created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discussion'
+
+  /notes:
+    get:
+      tags: [Notes]
+      summary: Get user notes
+      parameters:
+        - in: query
+          name: courseId
+          schema:
+            type: string
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Note'
+
+    post:
+      tags: [Notes]
+      summary: Create note
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                courseId:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Note created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+
+  /analytics/dashboard:
+    get:
+      tags: [Analytics]
+      summary: Get dashboard analytics
+      responses:
+        '200':
+          description: Dashboard analytics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userStats:
+                    type: object
+                    properties:
+                      totalUsers:
+                        type: number
+                      activeUsers:
+                        type: number
+                  courseStats:
+                    type: object
+                    properties:
+                      totalCourses:
+                        type: number
+                      averageRating:
+                        type: number
+                  progressStats:
+                    type: object
+                    properties:
+                      completionRate:
+                        type: number
+                      averageScore:
+                        type: number
+
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: Courses
+    description: Course management endpoints
+  - name: Quizzes
+    description: Quiz management endpoints
+  - name: Progress
+    description: Progress tracking endpoints
+  - name: Discussions
+    description: Discussion forum endpoints
+  - name: Notes
+    description: Note management endpoints
+  - name: Analytics
+    description: Analytics and reporting endpoints
